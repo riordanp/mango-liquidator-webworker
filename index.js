@@ -34,14 +34,14 @@ if(!!window.SharedWorker) {
             worker.port.postMessage('stop');
         }
     });
-    $wallet.addEventListener('click', (ev) => {
-        state.wallet = new SolWalletAdapter('https://www.sollet.io');
-        state.wallet.on('connect', (pk) => {
-            console.log('Connected to ' + pk.toBase58())
-        });
-        state.wallet.on('disconnect', () => console.log('Disconnected'));
-        state.wallet.connect();
-    });
+    // $wallet.addEventListener('click', (ev) => {
+    //     state.wallet = new SolWalletAdapter('https://www.sollet.io');
+    //     state.wallet.on('connect', (pk) => {
+    //         console.log('Connected to ' + pk.toBase58())
+    //     });
+    //     state.wallet.on('disconnect', () => console.log('Disconnected'));
+    //     state.wallet.connect();
+    // });
 } else {
     alert('Error: You browser does not support SharedWorker');
 }
