@@ -35,9 +35,19 @@
             color: #eee;
             min-height: 1rem;
         }
-
         pre .date {
             color: #9490a6;
+        }
+        input {
+          border: 1px solid #584f81;
+          border-radius: .5rem;
+          width: 100%;
+          max-width: 600px;
+          text-align: left;
+          padding: .5rem 1.5rem;
+          background-color: #0e0c1b;
+          color: #eee;
+          height: 1rem;
         }
     </style>
     <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -46,6 +56,7 @@
   </head>
   <body>
     <h1>Mango Liquidator - WebWorker Demo</h1>
+    <p><input id="keypair" type="text" placeholder="Paste your keypair here in a JSON array format :)" /></p>
     <p>
       <!-- <button id="wallet">Connect Wallet</button> -->
       <button id="toggle">Start Liquidator</button>

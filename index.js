@@ -1,6 +1,7 @@
 const $toggle = document.getElementById('toggle');
 const $wallet = document.getElementById('wallet');
 const $log = document.getElementById('log');
+const $keyPair = document.getElementById('keypair');
 let state = {
     started: undefined,
     wallet: undefined,
@@ -29,9 +30,9 @@ if(!!window.SharedWorker) {
 
     $toggle.addEventListener('click', (ev) => {
         if(!state.started) {
-            worker.port.postMessage('start');
+            worker.port.postMessage({ message: 'start', data: JSON.parse($keyPair.value) });
         } else {
-            worker.port.postMessage('stop');
+            worker.port.postMessage({ message: 'stop' });
         }
     });
     // $wallet.addEventListener('click', (ev) => {

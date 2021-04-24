@@ -47,9 +47,7 @@ const programId = new PublicKey(Mango.IDS[cluster].mango_program_id)
 const dexProgramId = new PublicKey(Mango.IDS[cluster].dex_program_id)
 const mangoGroupPk = new PublicKey(Mango.IDS[cluster].mango_groups[group_name].mango_group_pk)
 
-// ONLY FOR TESTING DO NOT COMMIT YOUR KEYPAIR
-const keyPair = []
-
+let keyPair = []
 let accounts = []
 
 onconnect = function(e) {
@@ -60,9 +58,14 @@ onconnect = function(e) {
     ports.push(port)
     port.postMessage({ message: 'state', data: state })
     port.onmessage = function(e) {
-      switch(e.data) {
+      switch(e.data.message) {
           case 'start':
             if(!state.started) {
+              if(!e.data.data) {
+                postToAll('log', 'Failed to start liquidator. Missing Keypair.')
+                break;
+              }
+              keyPair = e.data.data
               state.started = true
               refreshAccounts()
               refreshPrices()
