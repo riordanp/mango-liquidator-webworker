@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width">
+    <style>
+        body {
+            background-color: #141026;
+            font-family: "Lato", sans-serif;
+            color: #eee;
+            text-align: center;
+        }
+        button {
+            background: linear-gradient(270deg, #afda06 34.47%, #fdca19 100%);
+            color: #141026;
+            padding: .5rem 1.5rem;
+            font-size: 1.5rem;
+            line-height: 2rem;
+            border: none;
+            border-radius: .5rem;
+            font-weight: 600;
+            font-size: 1.5rem;
+            margin: .5rem;
+            cursor: pointer;
+        }
+        pre {
+            margin: 0 auto;
+            border: 1px solid #584f81;
+            border-radius: .5rem;
+            max-width: 600px;
+            text-align: left;
+            padding: .5rem 1.5rem;
+            background-color: #0e0c1b;
+            color: #eee;
+            min-height: 1rem;
+        }
+
+        pre .date {
+            color: #9490a6;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700&display=swap" rel="stylesheet">
+    <title>Liquidator</title>
+  </head>
+  <body>
+    <h1>Mango Liquidator - WebWorker Demo</h1>
+    <p>
+      <!-- <button id="wallet">Connect Wallet</button> -->
+      <button id="toggle">Start Liquidator</button>
+    </p>
+    <pre id="log"></pre>
+    <!-- <script src="bundle_sol-wallet-adapter.js"></script> -->
+    <script src="index.js"></script>
+  </body>
+</html>

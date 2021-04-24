@@ -1,0 +1,33 @@
+{
+  "name": "mango-liquidator-webworker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server -c-1 -o",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/riordanp/mango-liquidator-webworker.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/riordanp/mango-liquidator-webworker/issues"
+  },
+  "homepage": "https://github.com/riordanp/mango-liquidator-webworker#readme",
+  "dependencies": {
+    "@blockworks-foundation/mango-client": "^0.1.11",
+    "@project-serum/serum": "^0.13.33",
+    "@project-serum/sol-wallet-adapter": "^0.1.8",
+    "@solana/web3.js": "^1.4.0",
+    "bn.js": "^5.2.0"
+  },
+  "devDependencies": {
+    "browser-resolve": "^2.0.0",
+    "browserify": "^17.0.0",
+    "esmify": "^2.1.1",
+    "http-server": "^0.12.3"
+  }
+}
