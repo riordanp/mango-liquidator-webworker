@@ -9,6 +9,8 @@ const {
   Connection,
   PublicKey,
   Transaction,
+  SYSVAR_CLOCK_PUBKEY,
+  TransactionInstruction,
 } = solanaWeb3
 
 const {
@@ -24,7 +26,8 @@ const {
   parseTokenAccountData,
   tokenToDecimals,
   makeForceCancelOrdersInstruction,
-  makePartialLiquidateInstruction,
+  encodeMangoInstruction,
+//  makePartialLiquidateInstruction,
 } = Mango
 
 const {
@@ -49,6 +52,8 @@ const mangoGroupPk = new PublicKey(Mango.IDS[cluster].mango_groups[group_name].m
 
 let keyPair = []
 let accounts = []
+
+const liquidating = {}
 
 onconnect = function(e) {
     console.log('Connection')    
@@ -105,21 +110,28 @@ async function refreshPrices() {
     const connection = new Connection(clusterUrl, 'singleGossip')
     const mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
     let prices = await mangoGroup.getPrices(connection)
-    console.log(prices)
 
     for(let account of accounts) {
-      const collateralRatio = account.getCollateralRatio(mangoGroup, prices)
-      if(collateralRatio < mangoGroup.maintCollRatio) {
-        const assetsValue = account.getAssetsVal(mangoGroup, prices)
-        if(collateralRatio < 0.01 || assetsValue < 0.1 || account.beingLiquidated) {
+      const assetsVal = account.getAssetsVal(mangoGroup, prices)
+      const liabsVal = account.getLiabsVal(mangoGroup, prices)
+      const collateralRatio = (assetsVal / liabsVal)
+      //const collateralRatio = account.getCollateralRatio(mangoGroup, prices)
+      if(collateralRatio < mangoGroup.maintCollRatio) {        
+        const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
+        if(collateralRatio < 0.01 || liabsVal < 0.1 || !account.beingLiquidated || deficit < 0.1) {
+          //console.log(`skipped account ${account.publicKey.toBase58()} with cr ${collateralRatio}`, account)
           continue
         }
-
-        liquidate(account).then((data) => {
-          postToAll('log', `Liquidated an account ${data.liqueePublicKey} for ${data.tokens[0]} ETH ${data.tokens[1]} BTC ${data.tokens[2]} USDT`)
-        }).catch((err) => {
-          postToAll('log', `Error liquidating account: ${err.message}`)
-        })   
+        console.log(`account ${account.publicKey.toBase58()} with cr ${collateralRatio}`)
+        // if(!liquidating[account.publicKey.toBase58()]) {
+          liquidate(account, prices).then((data) => {
+            postToAll('log', `Liquidated an account ${data.liqueePublicKey}`)
+          }).catch((err) => {
+            postToAll('log', `Error liquidating account: ${err.message}`)
+          })
+        // } else {
+        //   console.log(`account ${account.publicKey.toBase58()} already liquidating`)
+        // }
       }
     }
   } catch (err) {
@@ -132,13 +144,13 @@ async function refreshPrices() {
   }
 }
 
-async function liquidate(account) {
+async function liquidate(account, prices) {
+  console.log('liquidate', account, prices)
   const client = new Mango.MangoClient()
   const connection = new Connection(clusterUrl, 'singleGossip')
   const mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
-  
   const payer = new Account(keyPair)
-
+  
   const tokenWallets = (await Promise.all(
     mangoGroup.tokens.map(
       (mint) => findLargestTokenAccountForOwner(connection, payer.publicKey, mint).then(
@@ -150,13 +162,6 @@ async function liquidate(account) {
   const markets = await Promise.all(mangoGroup.spotMarkets.map(
     (pk) => Market.load(connection, pk, {skipPreflight: true, commitment: 'singleGossip'}, dexProgramId)
   ))
-
-  const liqorOpenOrdersKeys = []
-
-  for (let i = 0; i < NUM_MARKETS; i++) {
-    let openOrdersAccounts = await markets[i].findOpenOrdersAccountsForOwner(connection, payer.publicKey)
-    liqorOpenOrdersKeys.push(openOrdersAccounts[0].publicKey)
-  }
 
   const cancelLimit = 5  
   const [vaultAccs, liqorAccs] = await Promise.all([
@@ -251,7 +256,7 @@ async function liquidate(account) {
       maxNetIndex = i
     }
   }
-
+  liquidating[account.publicKey.toBase58()] = true
   transaction.add(makePartialLiquidateInstruction(
     programId,
     mangoGroup.publicKey,
@@ -268,6 +273,8 @@ async function liquidate(account) {
   ))
 
   await client.sendTransaction(connection, transaction, payer, [])
+  liquidating[account.publicKey.toBase58()] = false
+  return { liqueePublicKey: account.publicKey }
 }
 
 function sleep(ms) {
@@ -278,4 +285,45 @@ function postToAll(message, data) {
   for(let port of ports) {
     port.postMessage({ message: message, data: data })
   }
+}
+
+function makePartialLiquidateInstruction(
+  programId,
+  mangoGroup,
+  liqor,
+  liqorInTokenWallet,
+  liqorOutTokenWallet,
+  liqeeMarginAccount,
+  inTokenVault,
+  outTokenVault,
+  signerKey,
+  openOrders,
+  oracles,
+  maxDeposit,
+) {
+  const keys = [
+    { isSigner: false, isWritable: true, pubkey: mangoGroup },
+    { isSigner: true, isWritable: false, pubkey: liqor },
+    { isSigner: false, isWritable: true, pubkey: liqorInTokenWallet },
+    { isSigner: false, isWritable: true, pubkey: liqorOutTokenWallet },
+    { isSigner: false, isWritable: true, pubkey: liqeeMarginAccount },
+    { isSigner: false, isWritable: true, pubkey: inTokenVault },
+    { isSigner: false, isWritable: true, pubkey: outTokenVault },
+    { isSigner: false, isWritable: false, pubkey: signerKey },
+    { isSigner: false, isWritable: false, pubkey: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') },
+    { isSigner: false, isWritable: false, pubkey: SYSVAR_CLOCK_PUBKEY },
+    ...openOrders.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+    ...oracles.map((pubkey) => ({
+      isSigner: false,
+      isWritable: false,
+      pubkey,
+    })),
+  ];
+  const data = encodeMangoInstruction({ PartialLiquidate: { maxDeposit } });
+
+  return new TransactionInstruction({ keys, data, programId });
 }

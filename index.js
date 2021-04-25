@@ -21,7 +21,7 @@ if(!!window.SharedWorker) {
                 state = newState;
                 break;
             case 'log':
-                log(e.data)
+                log(e.data.data)
                 break;
             default:
                 console.log('Unknown message from worker:', e.data)
