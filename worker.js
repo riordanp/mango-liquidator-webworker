@@ -81,42 +81,54 @@ onconnect = function(e) {
 }
 
 async function refreshAccounts() {
-  console.log('refreshAccounts')
-  const client = new Mango.MangoClient()
-  const connection = new Connection(clusterUrl, 'singleGossip')
-  const mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
-  accounts = await client.getAllMarginAccounts(connection, programId, mangoGroup)
-  console.log('Accounts Length: ', accounts.length)
-  if(state.started) {
-    setTimeout(refreshAccounts, accountsCheckInterval)
+  try {
+    console.log('refreshAccounts')
+    const client = new Mango.MangoClient()
+    const connection = new Connection(clusterUrl, 'singleGossip')
+    const mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
+    accounts = await client.getAllMarginAccounts(connection, programId, mangoGroup)
+    console.log('Accounts Length: ', accounts.length)
+  } catch (err) {
+    console.error(err)
+    postToAll('log', `Error refreshing accounts: ${err.message}`)
+  } finally {
+    if(state.started) {
+      setTimeout(refreshAccounts, accountsCheckInterval)
+    }
   }
 }
 
 async function refreshPrices() {
-  console.log('refreshPrices')
-  const client = new Mango.MangoClient()
-  const connection = new Connection(clusterUrl, 'singleGossip')
-  const mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
-  let prices = await mangoGroup.getPrices(connection)
-  console.log(prices)
+  try {
+    console.log('refreshPrices')
+    const client = new Mango.MangoClient()
+    const connection = new Connection(clusterUrl, 'singleGossip')
+    const mangoGroup = await client.getMangoGroup(connection, mangoGroupPk)
+    let prices = await mangoGroup.getPrices(connection)
+    console.log(prices)
 
-  for(let account of accounts) {
-    const collateralRatio = account.getCollateralRatio(mangoGroup, prices)
-    if(collateralRatio < mangoGroup.maintCollRatio) {
-      const assetsValue = account.getAssetsVal(mangoGroup, prices)
-      if(collateralRatio < 0.01 || assetsValue < 0.1 || account.beingLiquidated) {
-        continue
+    for(let account of accounts) {
+      const collateralRatio = account.getCollateralRatio(mangoGroup, prices)
+      if(collateralRatio < mangoGroup.maintCollRatio) {
+        const assetsValue = account.getAssetsVal(mangoGroup, prices)
+        if(collateralRatio < 0.01 || assetsValue < 0.1 || account.beingLiquidated) {
+          continue
+        }
+
+        liquidate(account).then((data) => {
+          postToAll('log', `Liquidated an account ${data.liqueePublicKey} for ${data.tokens[0]} ETH ${data.tokens[1]} BTC ${data.tokens[2]} USDT`)
+        }).catch((err) => {
+          postToAll('log', `Error liquidating account: ${err.message}`)
+        })   
       }
-
-      liquidate(account).then((data) => {
-        postToAll('log', `Liquidated an account ${data.liqueePublicKey} for ${data.tokens[0]} ETH ${data.tokens[1]} BTC ${data.tokens[2]} USDT`)
-      }).catch((err) => {
-        postToAll('log', `Error liquidating account: ${err.message}`)
-      })   
     }
-  }
-  if(state.started) {
-    setTimeout(refreshPrices, priceCheckInterval)
+  } catch (err) {
+    console.error(err)
+    postToAll('log', `Error refreshing prices: ${err.message}`)
+  } finally {
+    if(state.started) {
+      setTimeout(refreshPrices, priceCheckInterval)
+    }
   }
 }
 
