@@ -118,7 +118,7 @@ async function refreshPrices() {
       //const collateralRatio = account.getCollateralRatio(mangoGroup, prices)
       if(collateralRatio < mangoGroup.maintCollRatio) {        
         const deficit = liabsVal * mangoGroup.initCollRatio - assetsVal
-        if(collateralRatio < 0.01 || liabsVal < 0.1 || !account.beingLiquidated || deficit < 0.1) {
+        if(collateralRatio < 0.01 || liabsVal < 0.1 || deficit < 0.1) {
           //console.log(`skipped account ${account.publicKey.toBase58()} with cr ${collateralRatio}`, account)
           continue
         }
